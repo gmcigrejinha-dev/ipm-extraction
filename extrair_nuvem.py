@@ -7,7 +7,6 @@ def extrair_na_nuvem():
     with sync_playwright() as p:
         print("🌐 Inicializando Chromium no modo Headless...")
 
-        # 1. Parâmetros avançados para disfarçar a automação no modo Headless
         browser = p.chromium.launch(
             headless=True,
             args=[
@@ -26,7 +25,6 @@ def extrair_na_nuvem():
 
         page = context.new_page()
 
-        # Injeta script para remover a flag de automação visível do navegador
         page.add_init_script(
             "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
         )
@@ -59,7 +57,7 @@ def extrair_na_nuvem():
 
         page.on("response", capturar_resposta)
 
-        # --- PARTE 2: Acesso e Captura Dinâmica do Frame de Conteúdo ---
+        # --- PARTE 2: Acesso e Captura Dinâmica do Frame ---
         print("🌐 Acessando o portal na nuvem...")
         page.goto(
             "https://igrejinha.atende.net/autoatendimento/servicos/consulta-de-licitacoes/detalhar/1",
@@ -67,45 +65,37 @@ def extrair_na_nuvem():
         )
 
         print("⏳ Localizando o frame ativo do formulário...")
-        # Aguarda a criação de frames no DOM da página
         page.wait_for_timeout(5000)
 
-        # Varre todos os frames da página até achar aquele que contém os elementos de filtro
         target_frame = None
         for frame in page.frames:
             try:
-                # Procura se o frame possui o campo de filtro
-                if frame.locator(
-                    "span.label_botao_acao:has-text('Consultar')"
-                ).count() > 0 or frame.locator("input").count() > 0:
+                if frame.locator("input").count() > 0:
                     target_frame = frame
                     print(f"✅ Frame ativo encontrado: {frame.url[:60]}...")
                     break
             except Exception:
                 continue
 
-        # Se a varredura por frames não encontrar, usa o frame_locator padrão como contingência
         if not target_frame:
             print("⚠️ Usando seletor padrão de iframe...")
             target_frame = page.frame_locator("iframe").first
 
-        print("🔍 Preenchendo a licitação 1044...")
+        print("🔍 Preenchendo a licitação 1044 e disparando busca...")
 
-        # Preenche o filtro dentro do frame correto
         campo_preenchido = False
-
-        # Tentativa 1: Rótulo direto
         try:
             campo = target_frame.get_by_label(
                 "Primeiro valor para o filtro sobre o campo Número Licitação"
             )
             campo.wait_for(state="visible", timeout=5000)
             campo.fill("1044")
+            campo.press("Enter")
             campo_preenchido = True
+            print("✔️ Valor preenchido e tecla Enter pressionada!")
         except Exception:
             pass
 
-        # Tentativa 2: Busca por todos os inputs visíveis caso o rótulo mude
         if not campo_preenchido:
             try:
                 inputs = target_frame.locator("input[type='text'], input:not([type])")
@@ -113,22 +103,18 @@ def extrair_na_nuvem():
                     inp = inputs.nth(i)
                     if inp.is_visible():
                         inp.fill("1044")
+                        inp.press("Enter")
                         campo_preenchido = True
+                        print("✔️ Valor preenchido no input genérico e Enter pressionado!")
                         break
             except Exception as e:
                 print(f"❌ Falha ao preencher campo: {e}")
 
-        print("🖱️ Clicando em Consultar...")
-        # Tenta localizar o botão por texto/classe via seletores alternativos
-        btn_consultar = target_frame.locator(
-            "span.label_botao_acao:has-text('Consultar'), "
-            "button:has-text('Consultar'), "
-            "div.btn:has-text('Consultar'), "
-            "[aria-label*='Consultar']"
-        ).first
-        
-        btn_consultar.wait_for(state="visible", timeout=10000)
-        btn_consultar.click(force=True)
+        # Tenta acionar botões de ícone de consulta como contingência
+        try:
+            target_frame.locator(".fa-search, .fa-filter, [title*='Consultar']").first.click(force=True)
+        except Exception:
+            pass
 
         print("⏳ Aguardando a tabela de resultados carregar...")
         page.wait_for_timeout(4000)
@@ -165,17 +151,19 @@ def extrair_na_nuvem():
         )
 
         botao_selecao.wait_for(state="visible", timeout=15000)
-        botao_selecao.click()
+        botao_selecao.click(force=True)
         print("✔️ Linha selecionada com sucesso!")
 
         page.wait_for_timeout(1000)
 
         print("📂 Abrindo detalhes...")
-        botao_span = target_frame.locator(
-            "span.label_botao_acao:has-text('Detalhar')"
-        )
-        botao_span.wait_for(state="visible", timeout=10000)
-        botao_span.click()
+        try:
+            target_frame.eval_on_selector(
+                "span.label_botao_acao:has-text('Detalhar'), button:has-text('Detalhar')",
+                "el => el.click()",
+            )
+        except Exception:
+            target_frame.locator("text='Detalhar'").first.click(force=True)
 
         page.wait_for_timeout(3000)
 
@@ -195,7 +183,7 @@ def extrair_na_nuvem():
                 print(f"👉 Clicando na aba: {aba}")
                 guia_aba = target_frame.locator(f"text='{aba}'")
                 if guia_aba.is_visible():
-                    guia_aba.click()
+                    guia_aba.click(force=True)
                     page.wait_for_timeout(2500)
             except Exception as e:
                 print(f"⚠️ Não foi possível abrir a aba '{aba}': {e}")
