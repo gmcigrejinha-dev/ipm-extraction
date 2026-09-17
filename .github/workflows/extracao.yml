@@ -2,8 +2,8 @@ name: Automação Atende.net
 
 on:
   schedule:
-    - cron: '0 9 * * *' # Executa automaticamente todos os dias às 09:00 UTC
-  workflow_dispatch: # Permite disparar manualmente pelo botão no GitHub
+    - cron: '0 9 * * *' # Roda todos os dias às 09:00 UTC
+  workflow_dispatch: # Botão para rodar manualmente quando quiser
 
 jobs:
   run-scraper:
