@@ -170,11 +170,7 @@ def extrair_na_nuvem():
         print("🎉 Processo concluído! Arquivo 'licitacao_1044_completa.json' gerado.")
         # -------------------------------------------------------------
         # -------------------------------------------------------------
-
-if __name__ == "__main__":
-    extrair_com_sessao_real()
-
-browser.close()
+        browser.close()
 
 
 if __name__ == "__main__":
