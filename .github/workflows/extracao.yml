@@ -29,12 +29,12 @@ jobs:
           playwright install --with-deps chromium
 
       - name: Executar automação de cliques e captura
-        run: python extrair_nuvem.py
+        run: python params_grid.py # Ajuste para o nome do seu arquivo Python atual
 
-      - name: Commitar e enviar JSON atualizado
+      - name: Commitar e enviar JSONs atualizados
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add licitacao_1044_completa.json
-          git commit -m "chore: atualização automática dos dados da licitação 1044" || exit 0
+          git add licitacao_*.json
+          git commit -m "chore: atualização automática dos dados de múltiplas licitações" || exit 0
           git push
